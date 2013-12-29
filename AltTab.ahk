@@ -149,6 +149,7 @@ since 25-04-06:
 #InstallKeybdHook
 #InstallMouseHook
 #NoTrayIcon
+#MaxHotkeysPerInterval 1000
 Process Priority,,High
 SetWinDelay, -1
 SetBatchLines, -1
