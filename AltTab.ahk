@@ -184,12 +184,14 @@ WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 ;Global variable
 Exclude_Not_In_List =0
 PID_Filter =  ;Filter windows if does not math the PID. Set empty disable this feature
+Hide_Other_Group =0
 Display_List_Shown =0
 Window_Hotkey =0
 Use_Large_Icons_Current =%Use_Large_Icons% ; for remembering original user setting but changing on the fly
 Gui_Dock_Windows_List = ; keep track of number of docked windows
 Time_Since_Last_Alt_Close =0 ; initialise time for repeat rate allowed for closing windows with alt+\
 Viewed_Window_List =
+Tab_Shown =
 
 Col_Title_List =#| |Window|Exe|View|Top|Status
 StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
@@ -387,6 +389,11 @@ LAlt & RAlt::Reload
 
 Display_List:
   LV_ColorChange() ; clear all highlighting
+  if Hide_Other_Group 
+    Tab_Shown = %Group_Active%
+  else
+    Tab_Shown = %Group_List%
+  
   If Display_List_Shown =1 ; empty listview and image list if only updating - e.g. when closing a window (mbutton)
     LV_Delete()
   Else ; not shown - need to create gui for updating listview
@@ -396,9 +403,8 @@ Display_List:
     Gui, 1: Color, %Tab_Colour% ; i.e. border/background (default = 404040) ; barely visible - right and bottom sides only
     Gui, 1: Margin, 0, 0
     ; Tab stuff
-    ; TODO: Toggle mode need no tabs
     Gui, 1: Font, s%Font_Size_Tab%, %Font_Type_Tab%
-    Gui, 1: Add, Tab2, vGui1_Tab HWNDhw_Gui1_Tab Background w%Gui1_Tab__width% -0x200, %Group_List% ; -0x200 = ! TCS_MULTILINE
+    Gui, 1: Add, Tab2, vGui1_Tab HWNDhw_Gui1_Tab Background w%Gui1_Tab__width% -0x200, %Tab_Shown% ; -0x200 = ! TCS_MULTILINE
     Gui, 1: Tab, %Group_Active%,, Exact ; Future controls are owned by this tab
     Gui, 1: Add, StatusBar, Background%StatusBar_Background_Colour% ; add before changing font
     Gui, 1: Font, s%Font_Size% c%Font_Color% %Font_Style%, %Font_Type%
@@ -408,8 +414,7 @@ Display_List:
     Gosub, SB_Update__CPU
     SetTimer, SB_Update__CPU, 1000
     }
-  ; TODO: toggle mode need no tabs
-  GuiControl,, Gui1_Tab, |%Group_List% ; update in case of changes
+  GuiControl,, Gui1_Tab, |%Tab_Shown% ; update in case of changes
   GuiControl, ChooseString, Gui1_Tab, %Group_Active%
 
   ImageListID1 := IL_Create(10,5,Use_Large_Icons_Current) ; Create an ImageList so that the ListView can display some icons
@@ -566,7 +571,8 @@ LButton_Tab_Check:
   If Tab_Button_Clicked
     {
     Tab_Button_Clicked_Text := Tab_Button_Get_Text(Tab_Button_Clicked)
-    SetTimer, Tab__Drag_and_Drop, 60 ; check status of drag operation
+    if not Hide_Other_Group
+      SetTimer, Tab__Drag_and_Drop, 60 ; check status of drag operation
     }
 Return
 
@@ -620,7 +626,7 @@ Tab_Button_Get_Text(Tab_Index)
 {
   Global
   If Tab_Index
-    Loop, Parse, Group_List,|
+    Loop, Parse, Tab_Shown,|
       If (A_Index = Tab_Index)
         Return,  A_LoopField
 }
@@ -1223,8 +1229,9 @@ Gui_Window_Group_Load__part2:
 Return
 
 Custom_Group__make_array_of_contents:
-  Exclude_Not_In_List =
+  Exclude_Not_In_List = 0
   PID_Filter = 
+  Hide_Other_Group = 0
   if (Group_Active == "EXE")
     {
       WinGet, PID_Filter, PID, A ; get Cur_Exe_name to show only windows under current exe name
