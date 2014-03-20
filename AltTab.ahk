@@ -148,7 +148,7 @@ since 25-04-06:
 #Persistent
 #InstallKeybdHook
 #InstallMouseHook
-#NoTrayIcon
+;#NoTrayIcon
 #MaxHotkeysPerInterval 1000
 Process Priority,,High
 SetWinDelay, -1
@@ -181,6 +181,9 @@ Else
 
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 
+;Global variable
+Exclude_Not_In_List =0
+PID_Filter =  ;Filter windows if does not math the PID. Set empty disable this feature
 Display_List_Shown =0
 Window_Hotkey =0
 Use_Large_Icons_Current =%Use_Large_Icons% ; for remembering original user setting but changing on the fly
@@ -263,7 +266,7 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
   Selected_Row := LV_GetNext(0, "F")
   If Key =Alt_Tab
     {
-    Selected_Row += 1
+    Selected_Row += 1       
     If (Selected_Row > Window_Found_Count)
       Selected_Row =1
     }
@@ -393,6 +396,7 @@ Display_List:
     Gui, 1: Color, %Tab_Colour% ; i.e. border/background (default = 404040) ; barely visible - right and bottom sides only
     Gui, 1: Margin, 0, 0
     ; Tab stuff
+    ; TODO: Toggle mode need no tabs
     Gui, 1: Font, s%Font_Size_Tab%, %Font_Type_Tab%
     Gui, 1: Add, Tab2, vGui1_Tab HWNDhw_Gui1_Tab Background w%Gui1_Tab__width% -0x200, %Group_List% ; -0x200 = ! TCS_MULTILINE
     Gui, 1: Tab, %Group_Active%,, Exact ; Future controls are owned by this tab
@@ -404,6 +408,7 @@ Display_List:
     Gosub, SB_Update__CPU
     SetTimer, SB_Update__CPU, 1000
     }
+  ; TODO: toggle mode need no tabs
   GuiControl,, Gui1_Tab, |%Group_List% ; update in case of changes
   GuiControl, ChooseString, Gui1_Tab, %Group_Active%
 
@@ -433,12 +438,19 @@ Return
 
 
 Display_List__Find_windows_and_icons:
-  WinGet, Cur_Exe_Name, ProcessName, A
-  WinGet, Window_List, List ; Gather a list of running programs
+  if PID_Filter != 
+    {
+      WinGet, Window_List, List, ahk_pid %PID_Filter%
+    }
+  else
+    {
+      WinGet, Window_List, List ; Gather a list of running programs
+    }
 
   Window_Found_Count =0
   Loop, %Window_List%
     {
+    ;TODO: filter according to process name
     wid := Window_List%A_Index%
     WinGetTitle, wid_Title, ahk_id %wid%
     WinGet, Style, Style, ahk_id %wid%
@@ -464,7 +476,7 @@ Display_List__Find_windows_and_icons:
 
     ; CUSTOM GROUP FILTERING
     If (Group_Active != "Settings" AND Group_Active != "ALL") ; i.e. list is filtered, check filter contents to include
-      {
+    {
       Custom_Group_Include_wid_temp = ; initialise/reset
 
       Loop, %Group_Active_0% ; check current window id against the list to filter
@@ -483,15 +495,7 @@ Display_List__Find_windows_and_icons:
       If  (((Custom_Group_Include_wid_temp =1) and (Exclude_Item ="!"))
           or ((Custom_Group_Include_wid_temp !=1) and (Exclude_Not_In_List =1)))
         Continue
-      }
-
-      If (Group_Active = "EXE")
-         {
-
-      Same_Exe_Include_wid_temp = ; initialise/reset
-      If (Cur_Exe_Name != Exe_Name) ; match current exe name
-        Continue
-     }
+    }
 
     Dialog =0 ; init/reset
     If (Parent and ! Style_parent)
@@ -1220,7 +1224,12 @@ Return
 
 Custom_Group__make_array_of_contents:
   Exclude_Not_In_List =
-  If (Group_Active != "Settings" AND Group_Active != "ALL")
+  PID_Filter = 
+  if (Group_Active == "EXE")
+    {
+      WinGet, PID_Filter, PID, A ; get Cur_Exe_name to show only windows under current exe name
+    }
+  else If (Group_Active != "Settings" AND Group_Active != "ALL")
     {
     Group_Active_Contents := %Group_Active%
     If Group_Active_Contents contains Exclude_Not_In_List
