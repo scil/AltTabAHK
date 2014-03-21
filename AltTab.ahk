@@ -79,6 +79,9 @@ since 25-04-06:
 ;========================================================================================================
 ; USER EDITABLE SETTINGS:
 
+  ; Ini Setting file
+    Setting_INI_File = Alt_Tab_Settings.ini
+  
   ; Icons
     Use_Large_Icons =1 ; 0 = small icons, 1 = large icons in listview
 
@@ -1942,12 +1945,12 @@ IniFile(Var, Section, Default="")
   Global
   If IniFile_Read_or_Write =Read
     {
-    IniRead, %Var%, Alt_Tab_Settings.ini, %Section%, %Var%, %Default%
+    IniRead, %Var%, %Setting_INI_File%, %Section%, %Var%, %Default%
     If %Var% =ERROR
       %Var% = ; set to blank value instead of "error"
     }
   Else If IniFile_Read_or_Write =Write
-    IniWrite, % %Var%, Alt_Tab_Settings.ini, %Section%, %Var%
+    IniWrite, % %Var%, %Setting_INI_File%, %Section%, %Var%
 }
 
 
@@ -2137,8 +2140,8 @@ IsGroupsContains(ByRef group_ary, ByRef group_test)
 
 INIDeleteGroupItem(ByRef item)
 {
-  IniDelete, Alt_Tab_Settings.ini, Groups, %item%
-  IniDelete, Alt_Tab_Settings.ini, Groups, %item%_Group_Hotkey
+  IniDelete, %Setting_INI_File%, Groups, %item%
+  IniDelete, %Setting_INI_File%, Groups, %item%_Group_Hotkey
 }
 
 RemoveGroupsItem(ByRef group_list, ByRef item)
@@ -2219,7 +2222,7 @@ Delete_Ini_File_Settings:
   MsgBox, 1, ALT-TAB REPLACEMENT, Delete Settings (.ini) and load defaults?
   IfMsgbox, Cancel
     Return
-  FileDelete, Alt_Tab_Settings.ini
+  FileDelete, %Setting_INI_File%
   IniFile_Data("Read") ; load defaults
 Return
 
