@@ -153,6 +153,7 @@ since 25-04-06:
 Process Priority,,High
 SetWinDelay, -1
 SetBatchLines, -1
+Group_Active =
 
 IniFile_Data("Read")
 
@@ -181,7 +182,7 @@ Else
 
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 
-;Global variable
+;Setting when showing tabs
 Exclude_Not_In_List =0
 PID_Filter =  ;Filter windows if does not math the PID. Set empty disable this feature
 Hide_Other_Group =0
@@ -382,7 +383,7 @@ Check_Alt_Hotkey2_Up:
     Gosub, ListView_Destroy
 Return
 
-LAlt & RAlt::Reload
+;LAlt & RAlt::Reload
 
 ;========================================================================================================
 
@@ -392,7 +393,7 @@ Display_List:
   if Hide_Other_Group 
     Tab_Shown = %Group_Active%
   else
-    Tab_Shown = %Group_List%
+    Tab_Shown = %Group_Shown%
   
   If Display_List_Shown =1 ; empty listview and image list if only updating - e.g. when closing a window (mbutton)
     LV_Delete()
@@ -588,9 +589,9 @@ Tab__Drag_and_Drop:
     Tab_Button_Over := TCM_HITTEST()
   Tab_Button_Over_Text := Tab_Button_Get_Text(Tab_Button_Over)
   If (Tab_Button_Over < Tab_Button_Clicked)
-    Tab_Swap(Group_List, Tab_Button_Clicked_Text, Tab_Button_Over_Text)
+    Tab_Swap(Group_Shown, Tab_Button_Clicked_Text, Tab_Button_Over_Text)
   Else If (Tab_Button_Over > Tab_Button_Clicked)
-    Tab_Swap(Group_List, Tab_Button_Over_Text, Tab_Button_Clicked_Text)
+    Tab_Swap(Group_Shown, Tab_Button_Over_Text, Tab_Button_Clicked_Text)
 Return
 
 Tab_Swap(ByRef Tab_List, ByRef Text1, ByRef Text2)
@@ -599,7 +600,7 @@ Tab_Swap(ByRef Tab_List, ByRef Text1, ByRef Text2)
   StringReplace, Tab_List, Tab_List, %Text1% , %Text2%
   StringReplace, Tab_List, Tab_List, %Text2% , %Text1%
   Tab_Button_Clicked := Tab_Button_Over ; update
-  GuiControl,, Gui1_Tab, |%Group_List%
+  GuiControl,, Gui1_Tab, |%Group_Shown%  ; This function must not been called when Hide_Other_Group is 1.
   GuiControl, ChooseString, Gui1_Tab, %Tab_Button_Clicked_Text%
 }
 
@@ -1246,6 +1247,8 @@ Custom_Group__make_array_of_contents:
       }
     StringSplit, Group_Active_, Group_Active_Contents,|
     }
+  if not IsGroupsContains(Group_Shown, Group_Active)
+    Hide_Other_Group = 1
 Return
 
 Gui_Window_Group_Save_Edit:
@@ -1441,6 +1444,7 @@ Gui3_OK:
     Group_Active := Custom_Name ; automatically apply the saved group filter
     }
   Gosub, 3GuiClose
+  ; Group_Shown will be updated in IniFile_Data()
   IniFile_Data("Write")
   Global_Include_Edit = ; reset
   Global_Exclude_Edit =
@@ -1539,16 +1543,14 @@ Gui_Window_Group_Delete:
   If Group_Active =%A_ThisMenuItem%
     Group_Active = ALL
 
-  StringReplace, temp_List, Group_List, %A_ThisMenuItem% ; remove item from list
-  Group_List =
-  Loop, Parse, temp_List,|
-    If A_LoopField
-      Group_List .= "|" A_LoopField
-  StringTrimLeft, Group_List, Group_List, 1 ; remove leading |
+  RemoveGroupsItem(Group_List, A_ThisMenuItem)
+  RemoveGroupsItem(Group_Shown, A_ThisMenuItem)
 
   Hotkey, % %A_ThisMenuItem%_Group_Hotkey, Off, UseErrorLevel
-  IniDelete, Alt_Tab_Settings.ini, Groups, %A_ThisMenuItem%
-  IniDelete, Alt_Tab_Settings.ini, Groups, %A_ThisMenuItem%_Group_Hotkey
+
+  INIDeleteGroupItem(A_ThisMenuItem)
+  IniFile_Data("Write")
+  
   Gosub, Alt_Esc_Check_Alt_State ; hides alt-tab gui - shows again if alt still pressed
 Return
 
@@ -1582,6 +1584,8 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
       }
     }
   Group_Active := Group_Active_Before
+  if not IsGroupsContains(Group_Shown, Group_Active)
+    Group_Active = ALL
 Return
 
 
@@ -1912,6 +1916,7 @@ IniFile_Data(Read_or_Write)
   IniFile("Global_Include",           "Groups", "")
   IniFile("Global_Include",           "Groups", "")
   IniFile("Group_Active",             "Groups", "ALL")
+  Group_Shown =
   Loop, Parse, Group_List,|
     {
     IniFile(A_LoopField,                  "Groups", "")
@@ -1921,7 +1926,14 @@ IniFile_Data(Read_or_Write)
       Hotkey_temp := A_LoopField . "_Group_Hotkey"
       Hotkey, % %Hotkey_temp%, Group_Hotkey, On
       }
+    ; TODO read need_hide option
+    ; TODO: Decide groups need be shown
+    if (A_LoopField != "EXE")
+      Group_Shown .= "|" A_LoopField 
     }
+  StringTrimLeft, Group_Shown, Group_Shown, 1 ; remove leading |
+  if not IsGroupsContains(Group_Shown, Group_Active)
+    Group_Active := "ALL"
 }
 Return
 
@@ -2113,6 +2125,32 @@ Decimal_to_Hex(var)
   return var
 }
 
+IsGroupsContains(ByRef group_ary, ByRef group_test)
+{
+  Loop, Parse, group_ary,|
+  {
+    If (A_LoopField = group_test)
+        Return,  true
+  }
+  return, false
+}
+
+INIDeleteGroupItem(ByRef item)
+{
+  IniDelete, Alt_Tab_Settings.ini, Groups, %item%
+  IniDelete, Alt_Tab_Settings.ini, Groups, %item%_Group_Hotkey
+}
+
+RemoveGroupsItem(ByRef group_list, ByRef item)
+{
+  StringReplace, temp_List, group_list, %item% ; remove item from list
+  group_list =
+  Loop, Parse, temp_List,|
+    If A_LoopField
+      group_list .= "|" A_LoopField
+  StringTrimLeft, group_list, group_list, 1 ; remove leading |
+  return
+}
 
 DecodeInteger( p_type, p_address, p_offset, p_hex=true )
 {
