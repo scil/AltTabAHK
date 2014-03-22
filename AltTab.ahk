@@ -1051,6 +1051,8 @@ Gui_Hotkeys:
   Gui, 2: Add, Text, xm y+15, Main hotkeys:
   Gui, 2: Font
   Gui, 2: Add, Text, x+5 yp+2, (Note that "Alt" must be either Alt, Ctrl, Shift, Win or mouse XButton1 / 2 - but using XButton requires "Shift+Tab" is a single key!)
+  
+  Gui, 2: Add, Checkbox, vScroll_In_Taskbar Checked%Scroll_In_Taskbar% xm+188, Scorll in taskbar to active AltTab? 
   ; Gui_Add_Hotkey(Gui number, Text, Comment, variable name)
   Gui_Add_Hotkey(2, "Alt","(key in Alt+Tab)", "Alt_Hotkey")
     GuiControl, 2: Disable, Alt_Hotkey_Tab
@@ -1062,6 +1064,7 @@ Gui_Hotkeys:
   Gui_Add_Hotkey(2, "Tab","(key in Alt+Tab)", "Tab_Hotkey")
   Gui_Add_Hotkey(2, "Shift+Tab","(Key(s) in Alt+Shift+Tab)", "Shift_Tab_Hotkey")
   Gui_Add_Hotkey(2, "Esc","(key in Alt+Esc)", "Esc_Hotkey")
+  
     Gui, 2: Font, s10
   Gui, 2: Add, Text,xm y+15, Single keys:
     Gui, 2: Font
