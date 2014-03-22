@@ -156,7 +156,9 @@ since 25-04-06:
 Process Priority,,High
 SetWinDelay, -1
 SetBatchLines, -1
+
 Group_Active =
+WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 
 IniFile_Data("Read")
 
@@ -166,7 +168,7 @@ OnMessage( 0x06, "WM_ACTIVATE" ) ; alt tab list window lost focus > hide list
 
 LV_ColorInitiate() ; initiate listview color change procedure
 
-Gosub, Initiate_Hotkeys ; initiate Alt-Tab and Alt-Shift-Tab hotkeys and translate some modifier symbols
+Gosub, Initiate_Hotkeys ; initiate Alt-Tab and Alt-Shift-Tab hotkeys, taskbar scorll event and translate some modifier symbols.
 
 WS_EX_CONTROLPARENT =0x10000
 WS_EX_DLGMODALFRAME =0x1
@@ -183,8 +185,6 @@ If A_OSVersion =WIN_2000
 Else
   lv_h_win_2000_adj =0
 
-WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
-
 ;Setting when showing tabs
 Exclude_Not_In_List =0
 PID_Filter =  ;Filter windows if does not math the PID. Set empty disable this feature
@@ -200,21 +200,7 @@ Tab_Shown =
 Col_Title_List =#| |Window|Exe|View|Top|Status
 StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
 
-~WheelUp::
-  Gosub, ~WheelDown
-  If (Scroll_Over_wID = TaskBar_ID)
-    Loop, 2
-      Gosub, Alt_Shift_Tab
 Return
-
-~WheelDown::
-  MouseGetPos, JUNK, JUNK, Scroll_Over_wID
-    If ! (Scroll_Over_wID = TaskBar_ID)
-      Return
-    Gosub, Single_Key_Show_Alt_Tab
-    Hotkey, %Alt_Hotkey%%Use_AND_Symbol%Mbutton, ListView_Destroy, %state% UseErrorLevel ; select the window if launched from the taskbar
-Return
-
 
 ;========================================================================================================
 
@@ -241,6 +227,13 @@ Initiate_Hotkeys:
 
   If (! InStr(Tab_Hotkey, "Wheel") and ! InStr(Shift_Tab_Hotkey, "Wheel")) ; wheel isn't used as an alt-tab hotkey so can be used for scrolling list instead
     Use_Wheel_Scroll_List =1
+  
+  ; Listen wheel scorll event in taskbar if need
+  if Scroll_In_TaskBar
+  {
+    Hotkey, ~WheelUp, Taskbar_Scroll_Up
+    Hotkey, ~WheelDown, Taskbar_Scroll_Down
+  }
 Return
 
 
@@ -1552,7 +1545,7 @@ Gui_Window_Group_Delete:
   Hotkey, % %A_ThisMenuItem%_Group_Hotkey, Off, UseErrorLevel
 
   INIDeleteGroupItem(A_ThisMenuItem)
-  IniFile_Data("Write")
+  IniFile_Data("Write")     ; To Update Group List
   
   Gosub, Alt_Esc_Check_Alt_State ; hides alt-tab gui - shows again if alt still pressed
 Return
@@ -1591,6 +1584,29 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
     Group_Active = ALL
 Return
 
+TaskBar_Scroll_Up:
+  TaskBar_Scroll("Up")
+return
+
+TaskBar_Scroll_Down:
+  TaskBar_Scroll("Down")
+return
+
+TaskBar_Scroll(UpOrDown)
+{
+  global
+  MouseGetPos, JUNK, JUNK, Scroll_Over_wID
+  If ! (Scroll_Over_wID = TaskBar_ID)
+    Return
+  Gosub, Single_Key_Show_Alt_Tab
+  Hotkey, %Alt_Hotkey%%Use_AND_Symbol%Mbutton, ListView_Destroy, %state% UseErrorLevel ; select the window if launched from the taskbar
+  if UpOrDown = "Down"
+  {
+    Loop, 2
+      Gosub, Alt_Shift_Tab
+  }
+  Return
+}
 
 MButton_Close:
   MButton_Clicked =1
@@ -1907,6 +1923,7 @@ IniFile_Data(Read_or_Write)
   IniFile("Esc_Hotkey",               "Hotkeys", "Esc")
   IniFile("Single_Key_Show_Alt_Tab",  "Hotkeys", "")
   IniFile("Single_Key_Hide_Alt_Tab",  "Hotkeys", "Enter")
+  IniFile("Scroll_In_TaskBar",        "Hotkeys", "0")
 
 ; Sort_Order
   IniFile("Sort_By_Column",           "Sort_Order", "2") ; initial column to sort (2 is a hidden column)
@@ -2140,6 +2157,7 @@ IsGroupsContains(ByRef group_ary, ByRef group_test)
 
 INIDeleteGroupItem(ByRef item)
 {
+  global
   IniDelete, %Setting_INI_File%, Groups, %item%
   IniDelete, %Setting_INI_File%, Groups, %item%_Group_Hotkey
 }
