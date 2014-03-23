@@ -459,24 +459,40 @@ Display_List__Find_windows_and_icons:
     {
     ;TODO: filter according to process name
     wid := Window_List%A_Index%
+    
     WinGetTitle, wid_Title, ahk_id %wid%
+    If wid_Title = ; skip windows with no title - e.g. popup windows
+      Continue
+    
     WinGet, Style, Style, ahk_id %wid%
-
-    If ((Style & WS_DISABLED) or ! (wid_Title)) ; skip unimportant windows ; ! wid_Title or 
+    If (Style & WS_DISABLED) ; skip unimportant windows
         Continue
 
     WinGet, es, ExStyle, ahk_id %wid%
     Parent := Decimal_to_Hex( DllCall( "GetParent", "uint", wid ) )
+    If ((es & WS_EX_TOOLWINDOW)  and !(Parent)) ; filters out program manager, etc
+      continue
+    
     WinGet, Style_parent, Style, ahk_id %Parent%
     Owner := Decimal_to_Hex( DllCall( "GetWindow", "uint", wid , "uint", "4" ) ) ; GW_OWNER = 4
     WinGet, Style_Owner, Style, ahk_id %Owner%
-
-    If (((es & WS_EX_TOOLWINDOW)  and !(Parent)) ; filters out program manager, etc
-        or ( !(es & WS_EX_APPWINDOW)
-          and (((Parent) and ((Style_parent & WS_DISABLED) =0)) ; These 2 lines filter out windows that have a parent or owner window that is NOT disabled -
-            or ((Owner) and ((Style_Owner & WS_DISABLED) =0))))) ; NOTE - some windows result in blank value so must test for zero instead of using NOT operator!
-      continue
-
+    If (!( es & WS_EX_APPWINDOW ))
+    {      
+      ; NOTE - some windows result in blank value so must test for zero instead of using NOT operator!
+      If ((Parent) and ((Style_parent & WS_DISABLED) =0)) ; filter out windows that have a parent 
+        continue
+      If ((Owner) and ((Style_Owner & WS_DISABLED) =0))  ; filter out owner window that is NOT disabled -
+        continue
+      
+      ; This filter's logic is copy from the internet, I don't know the detail.
+      If ( Owner or ( es & WS_EX_TOOLWINDOW )) 
+      {
+        WinGetClass, Win_Class, ahk_id %wid%
+        If ( ! ( Win_Class ="#32770" ) )
+          Continue
+      }
+    }
+    
     WinGet, Exe_Name, ProcessName, ahk_id %wid%
     WinGetClass, Win_Class, ahk_id %wid%
     hw_popup := Decimal_to_Hex(DllCall("GetLastActivePopup", "uint", wid))
