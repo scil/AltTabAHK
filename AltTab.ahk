@@ -255,13 +255,16 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
     Gosub, Display_List
     Gosub, Alt_Tab_Common__Check_auto_switch_icon_sizes ; limit gui height / auto-switch icon sizes
     Gosub, Alt_Tab_Common__Highlight_Active_Window
-    If ( GetKeyState(Alt_Hotkey2, "P") or GetKeyState(Alt_Hotkey2)) ; Alt key still pressed, else gui not shown
+
+    If (Single_Key_Show_Alt_Tab_Used = "1" 
+          or ( GetKeyState(Alt_Hotkey2, "P") or GetKeyState(Alt_Hotkey2)) ) ; Alt key still pressed, else gui not shown
       {
-      Gui_vx := Gui_CenterX()
-      Gui, 1: Show, AutoSize x%Gui_vx% y%Gui_y%, Alt-Tab Replacement
-      Hotkeys_Toggle_Temp_Hotkeys("On") ; (state = "On" or "Off") ; ensure hotkeys are on
+        Gui_vx := Gui_CenterX()
+        Gui, 1: Show, AutoSize x%Gui_vx% y%Gui_y%, Alt-Tab Replacement
+        Hotkeys_Toggle_Temp_Hotkeys("On") ; (state = "On" or "Off") ; ensure hotkeys are on
       }
     }
+    
   Selected_Row := LV_GetNext(0, "F")
   If Key =Alt_Tab
     {
@@ -276,7 +279,9 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
       Selected_Row := Window_Found_Count
     }
   LV_Modify(Selected_Row, "Focus Select Vis") ; get selected row and ensure selection is visible
-  SetTimer, Check_Alt_Hotkey2_Up, 30
+
+  If Single_Key_Show_Alt_Tab_Used != 1
+    SetTimer, Check_Alt_Hotkey2_Up, 30
 
   GuiControl, Focus, Listview1 ; workaround for gui tab bug - gosub not activated when already activated button clicked on again
 
@@ -340,8 +345,8 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
 
 Single_Key_Show_Alt_Tab:
   Single_Key_Show_Alt_Tab_Used =1
-  Send, {%Alt_Hotkey2% down}
   Gosub, Alt_Tab
+  Hotkey, *%Esc_Hotkey%, Alt_Esc, On
   Hotkey, *%Single_Key_Hide_Alt_Tab%, ListView_Destroy, On
 Return
 
@@ -1576,9 +1581,10 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
         Group_Active=%A_LoopField% ; load custom group
         Gosub, Custom_Group__make_array_of_contents
         }
+
+        Gosub, Single_Key_Show_Alt_Tab
       ; check if currently active window is in the newly loaded group, else switch to 1st
-      Gosub, Single_Key_Show_Alt_Tab ; show list to generate updated variables to check
-      Viewed_Window_List .="|" Active_ID
+      ;Viewed_Window_List .="|" Active_ID
       ; Loop, %Window_Found_Count% ; abort switching and start to cycle through windows in list next
         ; {
         ; If (!InStr(Viewed_Window_List, Window%A_Index%) or Window_Found_Count <=1)
@@ -1835,7 +1841,7 @@ ListView_Destroy:
   SetTimer, SB_Update__ProcessCPU, Off
   If Single_Key_Show_Alt_Tab_Used =1
     {
-    Send, {%Alt_Hotkey2% up}
+    Hotkey, *%Esc_Hotkey%, Off
     Hotkey, *%Single_Key_Hide_Alt_Tab%, Off
     Single_Key_Show_Alt_Tab_Used = ; reset
     }
@@ -1958,6 +1964,7 @@ IniFile_Data(Read_or_Write)
     If %A_LoopField%_Group_Hotkey
       {
       Hotkey_temp := A_LoopField . "_Group_Hotkey"
+      ; TODO: Check invalid hotkey, add modify
       Hotkey, % %Hotkey_temp%, Group_Hotkey, On
       }
     ; TODO read need_hide option
