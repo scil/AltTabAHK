@@ -1955,9 +1955,8 @@ IniFile_Data(Read_or_Write)
 
 ; Groups + Group_TabKey - remember lists of windows
   IniFile("Group_List",               "Groups", "Settings|ALL|EXE")
-  If ! (Global_Include_Edit or Global_Exclude_Edit)
   IniFile("Global_Include",           "Groups", "")
-  IniFile("Global_Include",           "Groups", "")
+  IniFile("Global_Exclude",           "Groups", "")
   IniFile("Group_Active",             "Groups", "ALL")
   Group_Shown =
   Loop, Parse, Group_List,|
