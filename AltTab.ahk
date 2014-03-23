@@ -1082,6 +1082,7 @@ Gui_Hotkeys:
   	   LV_Add("", A_LoopField, %A_LoopField%_Group_Hotkey)
   Gui, 2: Add, Button, x+10 yp+40 gGui_2_Group_Hotkey_Assign w170, Assign hotkey to selected group:
   Gui, 2: Add, Hotkey, vGui_2_Group_Hotkey xp y+5, %Hotkey%
+  Gui, 2: Add, Checkbox, vGui_2_Group_Hotkey_WinNeed Checked0 , Win key Need? 
   Gui, 2: Add, Button, xp y+30 gGui_2_Group_Hotkey_Clear w170, Clear hotkey of selected group
   Gui, 2: Add, Text, xp y+30, ( Key: !=Alt, ^=Ctrl, +=Shift, #=Win )
   Gui, 2: Add, Text, xm+250, WARNING! No error checking for hotkeys - be careful what you choose! (Delete the .ini file to reset settings)
@@ -1096,15 +1097,25 @@ Gui_2_Group_Hotkey_Assign:
   Selected_Row := LV_GetNext(0, "F")
   If (! Selected_Row or ! Gui_2_Group_Hotkey)
     Return
+  
+  if Gui_2_Group_Hotkey_WinNeed
+  {
+    IfNotInString, #, %Gui_2_Group_Hotkey%
+      _Actual_Hotkey = #%Gui_2_Group_Hotkey%
+  }
+  else
+    _Actual_Hotkey = %Gui_2_Group_Hotkey%
+  
   Loop, Parse, Group_List,|
-    If %A_LoopField%_Group_Hotkey =%Gui_2_Group_Hotkey%
+    ;TODO Check the order of modifier key's symbol
+    If %A_LoopField%_Group_Hotkey =%_Actual_Hotkey%
       {
       Msgbox, Hotkey already exists! Please clear the duplicate hotkey first.
       Return
       }
   LV_GetText(Gui_2_Group_Selected, Selected_Row)
-  %Gui_2_Group_Selected%_Group_Hotkey := Gui_2_Group_Hotkey
-  LV_Modify(Selected_Row, "Col2", Gui_2_Group_Hotkey)
+  %Gui_2_Group_Selected%_Group_Hotkey := _Actual_Hotkey
+  LV_Modify(Selected_Row, "Col2", _Actual_Hotkey)
 Return
 
 
