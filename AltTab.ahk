@@ -1076,19 +1076,19 @@ Gui_Hotkeys:
   Gui, 2: Add, Text, x+5 yp+2, (Alternative way to show the Alt+Tab list by 1 key (blank for no hotkey) and another for selection)
   Gui_Add_Hotkey(2, "Alt+Tab list", "", "Single_Key_Show_Alt_Tab")
   Gui_Add_Hotkey(2, "Alt+Tab selection", "", "Single_Key_Hide_Alt_Tab")
+  
     Gui, 2: Font, s10
-  Gui, 2: Add, Text,xm y+30, Group hotkeys:
+  Gui, 2: Add, Text,xm y+30, Group TabKeys:
     Gui, 2: Font
   GuiControl, 2: Focus, Static1
-
-  Gui, 2: Add, ListView, section xm r15 w470 -Multi, Group name|Assigned hotkey
+  Gui, 2: Add, ListView, section xm r15 w470 -Multi, Group name|Assigned TabKey
   Loop, Parse, Group_List, |
     If (A_LoopField != "Settings")
-  	   LV_Add("", A_LoopField, %A_LoopField%_Group_Hotkey)
-  Gui, 2: Add, Button, x+10 yp+40 gGui_2_Group_Hotkey_Assign w170, Assign hotkey to selected group:
-  Gui, 2: Add, Hotkey, vGui_2_Group_Hotkey xp y+5, %Hotkey%
-  Gui, 2: Add, Checkbox, vGui_2_Group_Hotkey_WinNeed Checked0 , Win key Need? 
-  Gui, 2: Add, Button, xp y+30 gGui_2_Group_Hotkey_Clear w170, Clear hotkey of selected group
+  	   LV_Add("", A_LoopField, %A_LoopField%_Group_TabKey)
+  Gui, 2: Add, Button, x+10 yp+40 gGui_2_Group_TabKey_Assign w170, Assign TabKey to selected group:
+  Gui, 2: Add, Hotkey, vGui_2_Group_TabKey xp y+5,
+  Gui, 2: Add, Checkbox, vGui_2_Group_TabKey_WinNeed Checked0 , Win key Need? 
+  Gui, 2: Add, Button, xp y+30 gGui_2_Group_TabKey_Clear w170, Clear TabKey of selected group
   Gui, 2: Add, Text, xp y+30, ( Key: !=Alt, ^=Ctrl, +=Shift, #=Win )
   Gui, 2: Add, Text, xm+250, WARNING! No error checking for hotkeys - be careful what you choose! (Delete the .ini file to reset settings)
   Gui, 2: Add, Button, xm+430 g2GuiClose w100, &Cancel
@@ -1097,34 +1097,34 @@ Gui_Hotkeys:
 Return
 
 
-Gui_2_Group_Hotkey_Assign:
+Gui_2_Group_TabKey_Assign:
   Gui, 2: Submit, NoHide
   Selected_Row := LV_GetNext(0, "F")
-  If (! Selected_Row or ! Gui_2_Group_Hotkey)
+  If (! Selected_Row or ! Gui_2_Group_TabKey)
     Return
   
-  if Gui_2_Group_Hotkey_WinNeed
+  if Gui_2_Group_TabKey_WinNeed
   {
-    IfNotInString, #, %Gui_2_Group_Hotkey%
-      _Actual_Hotkey = #%Gui_2_Group_Hotkey%
+    IfNotInString, #, %Gui_2_Group_TabKey%
+      _Actual_Hotkey = #%Gui_2_Group_TabKey%
   }
   else
-    _Actual_Hotkey = %Gui_2_Group_Hotkey%
+    _Actual_Hotkey = %Gui_2_Group_TabKey%
   
   Loop, Parse, Group_List,|
     ;TODO Check the order of modifier key's symbol
-    If %A_LoopField%_Group_Hotkey =%_Actual_Hotkey%
+    If %A_LoopField%_Group_TabKey =%_Actual_Hotkey%
       {
-      Msgbox, Hotkey already exists! Please clear the duplicate hotkey first.
+      Msgbox, TabKey already exists! Please clear the duplicate TabKey first.
       Return
       }
   LV_GetText(Gui_2_Group_Selected, Selected_Row)
-  %Gui_2_Group_Selected%_Group_Hotkey := _Actual_Hotkey
+  %Gui_2_Group_Selected%_Group_TabKey := _Actual_Hotkey
   LV_Modify(Selected_Row, "Col2", _Actual_Hotkey)
 Return
 
 
-Gui_2_Group_Hotkey_Clear:
+Gui_2_Group_TabKey_Clear:
   Selected_Row := LV_GetNext(0, "F")
   If not Selected_Row
     Return
@@ -1136,8 +1136,8 @@ Gui_2_OK:
   Loop, % LV_GetCount() ; process group hotkeys from listview
     {
     LV_GetText(Group_Name, A_Index, 1)
-    LV_GetText(Group_Hotkey, A_Index, 2)
-    %Group_Name%_Group_Hotkey =%Group_Hotkey%
+    LV_GetText(Group_TabKey, A_Index, 2)
+    %Group_Name%_Group_TabKey =%Group_TabKey%
     }
   Gui, 2: Submit
   Gui, 2: Destroy
@@ -1582,6 +1582,9 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
         Gosub, Custom_Group__make_array_of_contents
         }
 
+      IfInString, A_ThisHotkey, %Alt_Hotkey%
+        Gosub, Alt_Tab
+      else
         Gosub, Single_Key_Show_Alt_Tab
       ; check if currently active window is in the newly loaded group, else switch to 1st
       ;Viewed_Window_List .="|" Active_ID
@@ -1950,7 +1953,7 @@ IniFile_Data(Read_or_Write)
   IniFile("Sort_By_Direction",        "Sort_Order", "Sort") ; initial sort direction
   IniFile("Sort_Direction_Symbol",    "Sort_Order", "[+]") ; initial sort direction
 
-; Groups + Group_Hotkey - remember lists of windows
+; Groups + Group_TabKey - remember lists of windows
   IniFile("Group_List",               "Groups", "Settings|ALL|EXE")
   If ! (Global_Include_Edit or Global_Exclude_Edit)
   IniFile("Global_Include",           "Groups", "")
@@ -1960,12 +1963,17 @@ IniFile_Data(Read_or_Write)
   Loop, Parse, Group_List,|
     {
     IniFile(A_LoopField,                  "Groups", "")
-    IniFile(A_LoopField . "_Group_Hotkey","Groups", "")
-    If %A_LoopField%_Group_Hotkey
+    IniFile(A_LoopField . "_Group_TabKey","Groups", "")
+    If %A_LoopField%_Group_TabKey
       {
-      Hotkey_temp := A_LoopField . "_Group_Hotkey"
+      TabKey_temp := A_LoopField . "_Group_TabKey"
       ; TODO: Check invalid hotkey, add modify
-      Hotkey, % %Hotkey_temp%, Group_Hotkey, On
+      Hotkey_Temp = % %TabKey_temp%
+      IfNotInString, Hotkey_Temp, %Alt_Hotkey%
+        Hotkey_Temp := Alt_Hotkey . Hotkey_Temp
+
+      %A_LoopField%_Group_Hotkey = %Hotkey_Temp%
+      Hotkey, %Hotkey_Temp%, Group_Hotkey, On
       }
     ; TODO read need_hide option
     ; TODO: Decide groups need be shown
@@ -2180,7 +2188,7 @@ INIDeleteGroupItem(ByRef item)
 {
   global
   IniDelete, %Setting_INI_File%, Groups, %item%
-  IniDelete, %Setting_INI_File%, Groups, %item%_Group_Hotkey
+  IniDelete, %Setting_INI_File%, Groups, %item%_Group_TabKey
 }
 
 RemoveGroupsItem(ByRef group_list, ByRef item)
