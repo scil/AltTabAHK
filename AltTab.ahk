@@ -159,6 +159,7 @@ SetBatchLines, -1
 
 Group_Active =
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
+Hidden_Tag := "Hidden"
 
 IniFile_Data("Read")
 
@@ -1276,7 +1277,8 @@ Custom_Group__make_array_of_contents:
       }
     StringSplit, Group_Active_, Group_Active_Contents,|
     }
-  if not IsListContains(Group_Shown, Group_Active)
+
+  if not IsListContains(Group_Shown, Group_Active) 
     Hide_Other_Group = 1
 Return
 
@@ -1977,6 +1979,8 @@ IniFile_Data(Read_or_Write)
     {
     IniFile(A_LoopField,                  "Groups", "")
     IniFile(A_LoopField . "_Group_TabKey","Groups", "")
+    IniFile(A_LoopField . "_Group_Attr"  ,"Groups", "")
+    
     If %A_LoopField%_Group_TabKey
       {
       TabKey_temp := A_LoopField . "_Group_TabKey"
@@ -1988,10 +1992,12 @@ IniFile_Data(Read_or_Write)
       %A_LoopField%_Group_Hotkey = %Hotkey_Temp%
       Hotkey, %Hotkey_Temp%, Group_Hotkey, On
       }
-    ; TODO read need_hide option
-    ; TODO: Decide groups need be shown
-    if (A_LoopField != "EXE")
+    
+    attr_name := A_LoopField . "_Group_Attr"
+    attr_filed := %attr_name%
+    if not IsListContains(attr_filed, Hidden_Tag)
       Group_Shown .= "|" A_LoopField 
+
     }
   StringTrimLeft, Group_Shown, Group_Shown, 1 ; remove leading |
   if not IsListContains(Group_Shown, Group_Active)
