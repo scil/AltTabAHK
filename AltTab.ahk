@@ -1276,7 +1276,7 @@ Custom_Group__make_array_of_contents:
       }
     StringSplit, Group_Active_, Group_Active_Contents,|
     }
-  if not IsGroupsContains(Group_Shown, Group_Active)
+  if not IsListContains(Group_Shown, Group_Active)
     Hide_Other_Group = 1
 Return
 
@@ -1617,7 +1617,7 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
       }
     }
   Group_Active := Group_Active_Before
-  if not IsGroupsContains(Group_Shown, Group_Active)
+  if not IsListContains(Group_Shown, Group_Active)
     Group_Active = ALL
 Return
 
@@ -1994,7 +1994,7 @@ IniFile_Data(Read_or_Write)
       Group_Shown .= "|" A_LoopField 
     }
   StringTrimLeft, Group_Shown, Group_Shown, 1 ; remove leading |
-  if not IsGroupsContains(Group_Shown, Group_Active)
+  if not IsListContains(Group_Shown, Group_Active)
     Group_Active := "ALL"
 }
 Return
@@ -2187,7 +2187,7 @@ Decimal_to_Hex(var)
   return var
 }
 
-IsGroupsContains(ByRef group_ary, ByRef group_test)
+IsListContains(ByRef group_ary, ByRef group_test)
 {
   Loop, Parse, group_ary,|
   {
