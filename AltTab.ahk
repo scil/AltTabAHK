@@ -1319,6 +1319,9 @@ Choose window titles/exes to include/exclude when LOADING a list:
   Gui, 3: Add, Checkbox, x+20 vExclude_Not_In_List Checked, Exclude all windows not in list?
   If not IsListContains(Group_Active_Attr, Exclude_Other_Tag)
     GuiControl,, Exclude_Not_In_List, 0 ; check box
+  Gui, 3: Add, Checkbox, y+5 vHidden_CB Checked, Hidden? Can only active it through hotkey
+  If not IsListContains(Group_Active_Attr, Hidden_Tag)
+    GuiControl,, Hidden_CB, 0 ; check box
 
   Gui, 3: Add, Button, xm+10 y+20 w80 gGui3_RESET, &Reset List
   Gui, 3: Add, Button, x+20 wp gGui3_SelectALL, Select &All
@@ -1449,7 +1452,8 @@ Gui3_OK:
   Custom_Attr = %Custom_Name%_Group_Attr
   If Exclude_Not_In_List =1 ; checked 
     %Custom_Attr% .= "|" . Exclude_Other_Tag
-  ;TODO: If hidden
+  If Hidden_CB = 1
+    %Custom_Attr% .= "|" . Hidden_Tag
   
   RowNumber = 0 ; init
   Loop
