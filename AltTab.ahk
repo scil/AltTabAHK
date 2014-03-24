@@ -159,6 +159,8 @@ SetBatchLines, -1
 
 Group_Active =
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
+Hidden_Tag := "Hidden"
+Exclude_Other_Tag := "Exclude_Not_In_List"
 
 IniFile_Data("Read")
 
@@ -312,8 +314,7 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
     Active_ID_Found =0 ; init
     Loop, %Window_Found_Count% ; select active program in list (not always the top item)
       {
-      LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
-      If (Window%RowText% = Active_ID)
+      If (Window%A_Index% = Active_ID )
         {
         Active_ID_Found :=A_Index
         Break
@@ -329,8 +330,7 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
           If (Exe_Name%A_Index% = Active_Process)
             {
             Active_ID := Window%A_Index% ; find this new ID in the listview
-            LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
-            If (Window%RowText% = Active_ID)
+            If (Window%A_Index% = Active_ID)
               {
               Active_ID_Found :=A_Index
               Break
@@ -459,24 +459,40 @@ Display_List__Find_windows_and_icons:
     {
     ;TODO: filter according to process name
     wid := Window_List%A_Index%
+    
     WinGetTitle, wid_Title, ahk_id %wid%
+    If wid_Title = ; skip windows with no title - e.g. popup windows
+      Continue
+    
     WinGet, Style, Style, ahk_id %wid%
-
-    If ((Style & WS_DISABLED) or ! (wid_Title)) ; skip unimportant windows ; ! wid_Title or 
+    If (Style & WS_DISABLED) ; skip unimportant windows
         Continue
 
     WinGet, es, ExStyle, ahk_id %wid%
     Parent := Decimal_to_Hex( DllCall( "GetParent", "uint", wid ) )
+    If ((es & WS_EX_TOOLWINDOW)  and !(Parent)) ; filters out program manager, etc
+      continue
+    
     WinGet, Style_parent, Style, ahk_id %Parent%
     Owner := Decimal_to_Hex( DllCall( "GetWindow", "uint", wid , "uint", "4" ) ) ; GW_OWNER = 4
     WinGet, Style_Owner, Style, ahk_id %Owner%
-
-    If (((es & WS_EX_TOOLWINDOW)  and !(Parent)) ; filters out program manager, etc
-        or ( !(es & WS_EX_APPWINDOW)
-          and (((Parent) and ((Style_parent & WS_DISABLED) =0)) ; These 2 lines filter out windows that have a parent or owner window that is NOT disabled -
-            or ((Owner) and ((Style_Owner & WS_DISABLED) =0))))) ; NOTE - some windows result in blank value so must test for zero instead of using NOT operator!
-      continue
-
+    If (!( es & WS_EX_APPWINDOW ))
+    {      
+      ; NOTE - some windows result in blank value so must test for zero instead of using NOT operator!
+      If ((Parent) and ((Style_parent & WS_DISABLED) =0)) ; filter out windows that have a parent 
+        continue
+      If ((Owner) and ((Style_Owner & WS_DISABLED) =0))  ; filter out owner window that is NOT disabled -
+        continue
+      
+      ; This filter's logic is copy from the internet, I don't know the detail.
+      If ( Owner or ( es & WS_EX_TOOLWINDOW )) 
+      {
+        WinGetClass, Win_Class, ahk_id %wid%
+        If ( ! ( Win_Class ="#32770" ) )
+          Continue
+      }
+    }
+    
     WinGet, Exe_Name, ProcessName, ahk_id %wid%
     WinGetClass, Win_Class, ahk_id %wid%
     hw_popup := Decimal_to_Hex(DllCall("GetLastActivePopup", "uint", wid))
@@ -1255,14 +1271,15 @@ Custom_Group__make_array_of_contents:
   else If (Group_Active != "Settings" AND Group_Active != "ALL")
     {
     Group_Active_Contents := %Group_Active%
-    If Group_Active_Contents contains Exclude_Not_In_List
-      {
+    attr_name = %Group_Active%_Group_Attr
+    Group_Active_Attr := %attr_name%
+    If IsListContains(Group_Active_Attr, Exclude_Other_Tag)
       Exclude_Not_In_List =1
-      StringReplace, Group_Active_Contents, Group_Active_Contents, Exclude_Not_In_List|, ; remove text
-      }
+  
     StringSplit, Group_Active_, Group_Active_Contents,|
     }
-  if not IsGroupsContains(Group_Shown, Group_Active)
+
+  if not IsListContains(Group_Shown, Group_Active) 
     Hide_Other_Group = 1
 Return
 
@@ -1300,8 +1317,11 @@ Choose window titles/exes to include/exclude when LOADING a list:
   Gui, 3: Add, ComboBox, x+5 w200 vCustom_Name, %Group_List%
     GuiControl, ChooseString, Custom_Name, %Group_Active%
   Gui, 3: Add, Checkbox, x+20 vExclude_Not_In_List Checked, Exclude all windows not in list?
-  If %Group_Active% not contains Exclude_Not_In_List
+  If not IsListContains(Group_Active_Attr, Exclude_Other_Tag)
     GuiControl,, Exclude_Not_In_List, 0 ; check box
+  Gui, 3: Add, Checkbox, y+5 vHidden_CB Checked, Hidden? Can only active it through hotkey
+  If not IsListContains(Group_Active_Attr, Hidden_Tag)
+    GuiControl,, Hidden_CB, 0 ; check box
 
   Gui, 3: Add, Button, xm+10 y+20 w80 gGui3_RESET, &Reset List
   Gui, 3: Add, Button, x+20 wp gGui3_SelectALL, Select &All
@@ -1346,8 +1366,6 @@ Gui_3_Listview_Populate(list)
   Global
   Loop, Parse, %list%,|
     {
-    If A_LoopField =Exclude_Not_In_List
-      Continue
     If A_LoopField contains .exe
       LV_Add("Check Icon2" ,"", A_LoopField) ; Icon 1 = not included icon, Icon 2 = blank
     Else
@@ -1429,11 +1447,14 @@ Gui3_OK:
     Return
     }
   StringReplace, Custom_Name, Custom_Name,%A_Space%,_,All
-
-  If Exclude_Not_In_List =1 ; checked - add suffix to variable name to filter
-    %Custom_Name% = |Exclude_Not_In_List ; add first entry - will parse and process when filtering alt-tab listview
-  Else
-    %Custom_Name% = ; make sure it is empty in case it previously existed (over-writing)
+  
+  %Custom_Name% = ; make sure it is empty in case it previously existed (over-writing)
+  Custom_Attr = %Custom_Name%_Group_Attr
+  If Exclude_Not_In_List =1 ; checked 
+    %Custom_Attr% .= "|" . Exclude_Other_Tag
+  If Hidden_CB = 1
+    %Custom_Attr% .= "|" . Hidden_Tag
+  
   RowNumber = 0 ; init
   Loop
     {
@@ -1452,6 +1473,7 @@ Gui3_OK:
     %Custom_Name% .= "|" . Title_temp
     }
   StringTrimLeft, %Custom_Name%, %Custom_Name%, 1 ; trim initial |
+  StringTrimLeft, %Custom_Attr%, %Custom_Attr%, 1 ; trim initial |
   If ! (Global_Include_Edit or Global_Exclude_Edit)
     {
     If Group_List not contains %Custom_Name%
@@ -1603,7 +1625,7 @@ Group_Hotkey: ; from loading ini file - determine hotkey behaviour based on curr
       }
     }
   Group_Active := Group_Active_Before
-  if not IsGroupsContains(Group_Shown, Group_Active)
+  if not IsListContains(Group_Shown, Group_Active)
     Group_Active = ALL
 Return
 
@@ -1955,14 +1977,16 @@ IniFile_Data(Read_or_Write)
 
 ; Groups + Group_TabKey - remember lists of windows
   IniFile("Group_List",               "Groups", "Settings|ALL|EXE")
-  IniFile("Global_Include",           "Groups", "")
-  IniFile("Global_Exclude",           "Groups", "")
+  IniFile("Global_Include",           "Groups", "", false)
+  IniFile("Global_Exclude",           "Groups", "", false)
   IniFile("Group_Active",             "Groups", "ALL")
   Group_Shown =
   Loop, Parse, Group_List,|
     {
-    IniFile(A_LoopField,                  "Groups", "")
-    IniFile(A_LoopField . "_Group_TabKey","Groups", "")
+    IniFile(A_LoopField,                  "Groups", "", true)
+    IniFile(A_LoopField . "_Group_TabKey","Groups", "", false)
+    IniFile(A_LoopField . "_Group_Attr"  ,"Groups", "", false)
+    
     If %A_LoopField%_Group_TabKey
       {
       TabKey_temp := A_LoopField . "_Group_TabKey"
@@ -1974,18 +1998,20 @@ IniFile_Data(Read_or_Write)
       %A_LoopField%_Group_Hotkey = %Hotkey_Temp%
       Hotkey, %Hotkey_Temp%, Group_Hotkey, On
       }
-    ; TODO read need_hide option
-    ; TODO: Decide groups need be shown
-    if (A_LoopField != "EXE")
+    
+    attr_name := A_LoopField . "_Group_Attr"
+    attr_filed := %attr_name%
+    if not IsListContains(attr_filed, Hidden_Tag)
       Group_Shown .= "|" A_LoopField 
+
     }
   StringTrimLeft, Group_Shown, Group_Shown, 1 ; remove leading |
-  if not IsGroupsContains(Group_Shown, Group_Active)
+  if not IsListContains(Group_Shown, Group_Active)
     Group_Active := "ALL"
 }
 Return
 
-IniFile(Var, Section, Default="")
+IniFile(Var, Section, Default="", Write_Empty=true)
 {
   Global
   If IniFile_Read_or_Write =Read
@@ -1995,7 +2021,18 @@ IniFile(Var, Section, Default="")
       %Var% = ; set to blank value instead of "error"
     }
   Else If IniFile_Read_or_Write =Write
+  {
+    If not Write_Empty
+      If %Var% =  ;Test if Var is empty
+      {
+        ; Test if the field in INI is existed
+        IniRead, temp_var, %Setting_INI_File%, %Section%, %Var%
+        If temp_var =ERROR
+          return
+      }
+      
     IniWrite, % %Var%, %Setting_INI_File%, %Section%, %Var%
+  }
 }
 
 
@@ -2173,7 +2210,7 @@ Decimal_to_Hex(var)
   return var
 }
 
-IsGroupsContains(ByRef group_ary, ByRef group_test)
+IsListContains(ByRef group_ary, ByRef group_test)
 {
   Loop, Parse, group_ary,|
   {
