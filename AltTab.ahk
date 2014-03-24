@@ -109,6 +109,10 @@ since 25-04-06:
     Edge_Dock_Activation_Delay =750 ;  Delay in milliseconds for hovering over edge-docked window/dismissing window
     Edge_Dock_Border_Visible =5 ; number of pixels of window to remain visible on screen edge
 
+  ; Tray Icon file name
+  Tray_Icon := "Icon.ico"
+  
+  
 ;========================================================================================================
 ; USER OVERRIDABLE SETTINGS:
 
@@ -206,6 +210,9 @@ Tab_Shown =
 
 Col_Title_List =#| |Window|Exe|View|Top|Status
 StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
+
+IfExist Icon.ico
+  Menu TRAY, Icon, %Tray_Icon%
 
 Return
 
