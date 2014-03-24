@@ -160,6 +160,7 @@ SetBatchLines, -1
 Group_Active =
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 Hidden_Tag := "Hidden"
+Exclude_Other_Tag := "Exclude_Not_In_List"
 
 IniFile_Data("Read")
 
@@ -1270,11 +1271,11 @@ Custom_Group__make_array_of_contents:
   else If (Group_Active != "Settings" AND Group_Active != "ALL")
     {
     Group_Active_Contents := %Group_Active%
-    If Group_Active_Contents contains Exclude_Not_In_List
-      {
+    attr_name = %Group_Active%_Group_Attr
+    Group_Active_Attr := %attr_name%
+    If IsListContains(Group_Active_Attr, Exclude_Other_Tag)
       Exclude_Not_In_List =1
-      StringReplace, Group_Active_Contents, Group_Active_Contents, Exclude_Not_In_List|, ; remove text
-      }
+  
     StringSplit, Group_Active_, Group_Active_Contents,|
     }
 
@@ -1316,7 +1317,7 @@ Choose window titles/exes to include/exclude when LOADING a list:
   Gui, 3: Add, ComboBox, x+5 w200 vCustom_Name, %Group_List%
     GuiControl, ChooseString, Custom_Name, %Group_Active%
   Gui, 3: Add, Checkbox, x+20 vExclude_Not_In_List Checked, Exclude all windows not in list?
-  If %Group_Active% not contains Exclude_Not_In_List
+  If not IsListContains(Group_Active_Attr, Exclude_Other_Tag)
     GuiControl,, Exclude_Not_In_List, 0 ; check box
 
   Gui, 3: Add, Button, xm+10 y+20 w80 gGui3_RESET, &Reset List
@@ -1362,8 +1363,6 @@ Gui_3_Listview_Populate(list)
   Global
   Loop, Parse, %list%,|
     {
-    If A_LoopField =Exclude_Not_In_List
-      Continue
     If A_LoopField contains .exe
       LV_Add("Check Icon2" ,"", A_LoopField) ; Icon 1 = not included icon, Icon 2 = blank
     Else
@@ -1445,11 +1444,13 @@ Gui3_OK:
     Return
     }
   StringReplace, Custom_Name, Custom_Name,%A_Space%,_,All
-
-  If Exclude_Not_In_List =1 ; checked - add suffix to variable name to filter
-    %Custom_Name% = |Exclude_Not_In_List ; add first entry - will parse and process when filtering alt-tab listview
-  Else
-    %Custom_Name% = ; make sure it is empty in case it previously existed (over-writing)
+  
+  %Custom_Name% = ; make sure it is empty in case it previously existed (over-writing)
+  Custom_Attr = %Custom_Name%_Group_Attr
+  If Exclude_Not_In_List =1 ; checked 
+    %Custom_Attr% .= "|" . Exclude_Other_Tag
+  ;TODO: If hidden
+  
   RowNumber = 0 ; init
   Loop
     {
@@ -1468,6 +1469,7 @@ Gui3_OK:
     %Custom_Name% .= "|" . Title_temp
     }
   StringTrimLeft, %Custom_Name%, %Custom_Name%, 1 ; trim initial |
+  StringTrimLeft, %Custom_Attr%, %Custom_Attr%, 1 ; trim initial |
   If ! (Global_Include_Edit or Global_Exclude_Edit)
     {
     If Group_List not contains %Custom_Name%
