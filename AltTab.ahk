@@ -1971,15 +1971,15 @@ IniFile_Data(Read_or_Write)
 
 ; Groups + Group_TabKey - remember lists of windows
   IniFile("Group_List",               "Groups", "Settings|ALL|EXE")
-  IniFile("Global_Include",           "Groups", "")
-  IniFile("Global_Exclude",           "Groups", "")
+  IniFile("Global_Include",           "Groups", "", false)
+  IniFile("Global_Exclude",           "Groups", "", false)
   IniFile("Group_Active",             "Groups", "ALL")
   Group_Shown =
   Loop, Parse, Group_List,|
     {
-    IniFile(A_LoopField,                  "Groups", "")
-    IniFile(A_LoopField . "_Group_TabKey","Groups", "")
-    IniFile(A_LoopField . "_Group_Attr"  ,"Groups", "")
+    IniFile(A_LoopField,                  "Groups", "", true)
+    IniFile(A_LoopField . "_Group_TabKey","Groups", "", false)
+    IniFile(A_LoopField . "_Group_Attr"  ,"Groups", "", false)
     
     If %A_LoopField%_Group_TabKey
       {
@@ -2005,7 +2005,7 @@ IniFile_Data(Read_or_Write)
 }
 Return
 
-IniFile(Var, Section, Default="")
+IniFile(Var, Section, Default="", Write_Empty=true)
 {
   Global
   If IniFile_Read_or_Write =Read
@@ -2015,7 +2015,18 @@ IniFile(Var, Section, Default="")
       %Var% = ; set to blank value instead of "error"
     }
   Else If IniFile_Read_or_Write =Write
+  {
+    If not Write_Empty
+      If %Var% =  ;Test if Var is empty
+      {
+        ; Test if the field in INI is existed
+        IniRead, temp_var, %Setting_INI_File%, %Section%, %Var%
+        If temp_var =ERROR
+          return
+      }
+      
     IniWrite, % %Var%, %Setting_INI_File%, %Section%, %Var%
+  }
 }
 
 
