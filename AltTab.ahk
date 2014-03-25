@@ -102,7 +102,7 @@ since 25-04-06:
 
   ; Width
     Listview_Width := A_ScreenWidth * 0.4
-    SB_Width := Listview_Width / 4 ; StatusBar section sizes
+    SB_Width := Listview_Width / 3 ; StatusBar section sizes
     Exe_Width_Max := Listview_Width / 5 ; Exe column max width
 
   ; Edge-Docking of windows to screen edges
@@ -430,7 +430,7 @@ Display_List:
     Gui, 1: Font, s%Font_Size% c%Font_Color% %Font_Style%, %Font_Type%
     Gui, 1: Add, ListView, x-1 y+-4 w%Listview_Width% AltSubmit -Multi NoSort Background%Listview_Colour% Count10 gListView_Event vListView1 HWNDhw_LV_ColorChange,%Col_Title_List%
     LV_ModifyCol(2, "Integer") ; sort hidden column 2 as numbers
-    SB_SetParts(SB_Width, SB_Width, SB_Width)
+    SB_SetParts(SB_Width, SB_Width)
     Gosub, SB_Update__CPU
     SetTimer, SB_Update__CPU, 1000
     }
@@ -727,7 +727,6 @@ SB_Update__ProcessCPU:
   Format_Float := A_FormatFloat
   SetFormat, Float, 4.1
   Get__Selected_Row_and_RowText()
-  ;TODO: the text below is too long to show
   SB_SetText( "Process CPU (%): " GetProcessTimes(PID%RowText%), 2)
   SetFormat, Float, %Format_Float%
 Return
