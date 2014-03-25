@@ -155,7 +155,7 @@ since 25-04-06:
 #Persistent
 #InstallKeybdHook
 #InstallMouseHook
-;#NoTrayIcon
+#NoTrayIcon
 #MaxHotkeysPerInterval 1000
 Process Priority,,High
 SetWinDelay, -1
@@ -211,8 +211,12 @@ Tab_Shown =
 Col_Title_List =#| |Window|Exe|View|Top|Status
 StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
 
-IfExist Icon.ico
-  Menu TRAY, Icon, %Tray_Icon%
+If not No_Tray_Icon
+{
+  Menu TRAY, Icon
+  IfExist Icon.ico
+    Menu TRAY, Icon, %Tray_Icon%
+}
 
 Return
 
@@ -723,6 +727,7 @@ SB_Update__ProcessCPU:
   Format_Float := A_FormatFloat
   SetFormat, Float, 4.1
   Get__Selected_Row_and_RowText()
+  ;TODO: the text below is too long to show
   SB_SetText( "Process CPU (%): " GetProcessTimes(PID%RowText%), 2)
   SetFormat, Float, %Format_Float%
 Return
@@ -850,6 +855,10 @@ GuiContextMenu:  ; right-click or press of the Apps key -> displays the menu onl
   Menu, Gui_Settings_Help, Add, Help, HELP_and_LATEST_VERSION_CHANGES
   Menu, Gui_Settings_Help, Add, Latest Changes, HELP_and_LATEST_VERSION_CHANGES
   Menu, ContextMenu1, Add, Settings && Help, :Gui_Settings_Help
+  
+  ; Exit entry
+  Menu, ContextMenu1, Add ; spacer
+  Menu, ContextMenu1, Add, &Exit, OnExit_Script_Closing
 
  Menu, ContextMenu1, Show, %A_GuiX%, %A_GuiY%
 Return
@@ -1088,6 +1097,7 @@ Gui_Hotkeys:
   Gui, 2: Add, Text, x+5 yp+2, (Note that "Alt" must be either Alt, Ctrl, Shift, Win or mouse XButton1 / 2 - but using XButton requires "Shift+Tab" is a single key!)
   
   Gui, 2: Add, Checkbox, vScroll_In_Taskbar Checked%Scroll_In_Taskbar% xm+188, Scorll in taskbar to active AltTab? 
+  Gui, 2: Add, Checkbox, vNo_Tray_Icon Checked%No_Tray_Icon% xp+300, Hide Tray Icon?
   ; Gui_Add_Hotkey(Gui number, Text, Comment, variable name)
   Gui_Add_Hotkey(2, "Alt","(key in Alt+Tab)", "Alt_Hotkey")
     GuiControl, 2: Disable, Alt_Hotkey_Tab
@@ -1983,6 +1993,7 @@ IniFile_Data(Read_or_Write)
   IniFile("Single_Key_Show_Alt_Tab",  "Hotkeys", "")
   IniFile("Single_Key_Hide_Alt_Tab",  "Hotkeys", "Enter")
   IniFile("Scroll_In_TaskBar",        "Hotkeys", "0")
+  IniFile("No_Tray_Icon",             "Hotkeys", "0")
 
 ; Sort_Order
   IniFile("Sort_By_Column",           "Sort_Order", "2") ; initial column to sort (2 is a hidden column)
