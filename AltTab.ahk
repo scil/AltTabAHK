@@ -102,13 +102,17 @@ since 25-04-06:
 
   ; Width
     Listview_Width := A_ScreenWidth * 0.4
-    SB_Width := Listview_Width / 4 ; StatusBar section sizes
+    SB_Width := Listview_Width / 3 ; StatusBar section sizes
     Exe_Width_Max := Listview_Width / 5 ; Exe column max width
 
   ; Edge-Docking of windows to screen edges
     Edge_Dock_Activation_Delay =750 ;  Delay in milliseconds for hovering over edge-docked window/dismissing window
     Edge_Dock_Border_Visible =5 ; number of pixels of window to remain visible on screen edge
 
+  ; Tray Icon file name
+  Tray_Icon := "Icon.ico"
+  
+  
 ;========================================================================================================
 ; USER OVERRIDABLE SETTINGS:
 
@@ -151,7 +155,7 @@ since 25-04-06:
 #Persistent
 #InstallKeybdHook
 #InstallMouseHook
-;#NoTrayIcon
+#NoTrayIcon
 #MaxHotkeysPerInterval 1000
 Process Priority,,High
 SetWinDelay, -1
@@ -161,6 +165,11 @@ Group_Active =
 WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 Hidden_Tag := "Hidden"
 Exclude_Other_Tag := "Exclude_Not_In_List"
+
+If A_Is64bitOS
+  GetClassLong_API := "GetClassLongPtr"
+else
+  GetClassLong_API := "GetClassLong"
 
 IniFile_Data("Read")
 
@@ -201,6 +210,13 @@ Tab_Shown =
 
 Col_Title_List =#| |Window|Exe|View|Top|Status
 StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
+
+If not No_Tray_Icon
+{
+  Menu TRAY, Icon
+  IfExist Icon.ico
+    Menu TRAY, Icon, %Tray_Icon%
+}
 
 Return
 
@@ -314,7 +330,8 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
     Active_ID_Found =0 ; init
     Loop, %Window_Found_Count% ; select active program in list (not always the top item)
       {
-      If (Window%A_Index% = Active_ID )
+      LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
+      If (Window%RowText% = Active_ID)
         {
         Active_ID_Found :=A_Index
         Break
@@ -330,7 +347,8 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
           If (Exe_Name%A_Index% = Active_Process)
             {
             Active_ID := Window%A_Index% ; find this new ID in the listview
-            If (Window%A_Index% = Active_ID)
+            LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
+            If (Window%RowText% = Active_ID)
               {
               Active_ID_Found :=A_Index
               Break
@@ -412,7 +430,7 @@ Display_List:
     Gui, 1: Font, s%Font_Size% c%Font_Color% %Font_Style%, %Font_Type%
     Gui, 1: Add, ListView, x-1 y+-4 w%Listview_Width% AltSubmit -Multi NoSort Background%Listview_Colour% Count10 gListView_Event vListView1 HWNDhw_LV_ColorChange,%Col_Title_List%
     LV_ModifyCol(2, "Integer") ; sort hidden column 2 as numbers
-    SB_SetParts(SB_Width, SB_Width, SB_Width)
+    SB_SetParts(SB_Width, SB_Width)
     Gosub, SB_Update__CPU
     SetTimer, SB_Update__CPU, 1000
     }
@@ -836,6 +854,10 @@ GuiContextMenu:  ; right-click or press of the Apps key -> displays the menu onl
   Menu, Gui_Settings_Help, Add, Help, HELP_and_LATEST_VERSION_CHANGES
   Menu, Gui_Settings_Help, Add, Latest Changes, HELP_and_LATEST_VERSION_CHANGES
   Menu, ContextMenu1, Add, Settings && Help, :Gui_Settings_Help
+  
+  ; Exit entry
+  Menu, ContextMenu1, Add ; spacer
+  Menu, ContextMenu1, Add, &Exit, OnExit_Script_Closing
 
  Menu, ContextMenu1, Show, %A_GuiX%, %A_GuiY%
 Return
@@ -1074,6 +1096,7 @@ Gui_Hotkeys:
   Gui, 2: Add, Text, x+5 yp+2, (Note that "Alt" must be either Alt, Ctrl, Shift, Win or mouse XButton1 / 2 - but using XButton requires "Shift+Tab" is a single key!)
   
   Gui, 2: Add, Checkbox, vScroll_In_Taskbar Checked%Scroll_In_Taskbar% xm+188, Scorll in taskbar to active AltTab? 
+  Gui, 2: Add, Checkbox, vNo_Tray_Icon Checked%No_Tray_Icon% xp+300, Hide Tray Icon?
   ; Gui_Add_Hotkey(Gui number, Text, Comment, variable name)
   Gui_Add_Hotkey(2, "Alt","(key in Alt+Tab)", "Alt_Hotkey")
     GuiControl, 2: Disable, Alt_Hotkey_Tab
@@ -1926,10 +1949,10 @@ Get_Window_Icon(wid, Use_Large_Icons_Current) ; (window id, whether to get large
           If ( ! h_icon )
             {
             If Use_Large_Icons_Current =1
-              h_icon := DllCall( "GetClassLongPtr", "uint", wid, "int", -14 ) ; GCL_HICON is -14
+              h_icon := DllCall( GetClassLong_API, "uint", wid, "int", -14 ) ; GCL_HICON is -14
             If ( ! h_icon )
               {
-              h_icon := DllCall( "GetClassLongPtr", "uint", wid, "int", -34 ) ; GCL_HICONSM is -34
+              h_icon := DllCall( GetClassLong_API, "uint", wid, "int", -34 ) ; GCL_HICONSM is -34
               If ( ! h_icon )
                 h_icon := DllCall( "LoadIcon", "uint", 0, "uint", 32512 ) ; IDI_APPLICATION is 32512
               }
@@ -1969,6 +1992,7 @@ IniFile_Data(Read_or_Write)
   IniFile("Single_Key_Show_Alt_Tab",  "Hotkeys", "")
   IniFile("Single_Key_Hide_Alt_Tab",  "Hotkeys", "Enter")
   IniFile("Scroll_In_TaskBar",        "Hotkeys", "0")
+  IniFile("No_Tray_Icon",             "Hotkeys", "0")
 
 ; Sort_Order
   IniFile("Sort_By_Column",           "Sort_Order", "2") ; initial column to sort (2 is a hidden column)
