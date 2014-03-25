@@ -326,7 +326,8 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
     Active_ID_Found =0 ; init
     Loop, %Window_Found_Count% ; select active program in list (not always the top item)
       {
-      If (Window%A_Index% = Active_ID )
+      LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
+      If (Window%RowText% = Active_ID)
         {
         Active_ID_Found :=A_Index
         Break
@@ -342,7 +343,8 @@ Alt_Tab_Common_Function(Key) ; Key = "Alt_Tab" or "Alt_Shift_Tab"
           If (Exe_Name%A_Index% = Active_Process)
             {
             Active_ID := Window%A_Index% ; find this new ID in the listview
-            If (Window%A_Index% = Active_ID)
+            LV_GetText(RowText, A_Index, 2)  ; Get hidden column numbers
+            If (Window%RowText% = Active_ID)
               {
               Active_ID_Found :=A_Index
               Break
