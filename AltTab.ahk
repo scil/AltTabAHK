@@ -166,7 +166,7 @@ WinGet, TaskBar_ID, ID, ahk_class Shell_TrayWnd ; for docked windows check
 Hidden_Tag := "Hidden"
 Exclude_Other_Tag := "Exclude_Not_In_List"
 
-If A_Is64bitOS
+If A_PtrSize = 8
   GetClassLong_API := "GetClassLongPtr"
 else
   GetClassLong_API := "GetClassLong"
