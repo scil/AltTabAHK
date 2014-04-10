@@ -214,7 +214,7 @@ StringSplit, Col_Title, Col_Title_List,| ; create list of listview header titles
 If not No_Tray_Icon
 {
   Menu TRAY, Icon
-  IfExist Icon.ico
+  IfExist %Tray_Icon%
     Menu TRAY, Icon, %Tray_Icon%
 }
 
