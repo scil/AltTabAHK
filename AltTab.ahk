@@ -473,6 +473,7 @@ Display_List__Find_windows_and_icons:
     }
 
   Window_Found_Count =0
+  Window_Found_Count_For_Top_Recent=0
   Loop, %Window_List%
     {
     ;TODO: filter according to process name
@@ -515,6 +516,9 @@ Display_List__Find_windows_and_icons:
     WinGetClass, Win_Class, ahk_id %wid%
     hw_popup := Decimal_to_Hex(DllCall("GetLastActivePopup", "uint", wid))
 
+    Window_Found_Count_For_Top_Recent += 1
+    if Window_Found_Count_For_Top_Recent !=2  ; the last window will escap from GROUP FILTERING
+    {
     ; CUSTOM GROUP FILTERING
     If (Group_Active != "Settings" AND Group_Active != "ALL") ; i.e. list is filtered, check filter contents to include
     {
@@ -536,6 +540,7 @@ Display_List__Find_windows_and_icons:
       If  (((Custom_Group_Include_wid_temp =1) and (Exclude_Item ="!"))
           or ((Custom_Group_Include_wid_temp !=1) and (Exclude_Not_In_List =1)))
         Continue
+    }
     }
 
     Dialog =0 ; init/reset
